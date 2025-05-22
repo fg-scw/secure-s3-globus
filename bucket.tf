@@ -3,7 +3,10 @@ resource "scaleway_object_bucket" "bucket" {
   region = var.region
 
   versioning { enabled = true }
-  tags = { key = "managed-by-tf", key = "globus" }
+  tags = {
+    key = "managed-by-tf"
+    key = "test-qubit"
+  }
 
   lifecycle_rule {
     enabled                                = true
@@ -23,4 +26,3 @@ resource "scaleway_object_bucket_policy" "policy" {
   # garantit que la policy est posée après la création du bucket
   depends_on = [scaleway_object_bucket.bucket]
 }
-
