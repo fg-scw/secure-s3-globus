@@ -14,13 +14,13 @@ variable "bucket_name" {
 
 variable "write_allowed_ips" {
     type    = list(string)
-    default = [ "2.4.19.133","0.0.0.0" ]
+    default = ["0.0.0.0"]
     #default = ["51.159.159.159/32"]
 }
 
 variable "read_allowed_ips" {
     type    = list(string)
-    default = [ "2.4.19.133","0.0.0.0" ]
+    default = ["0.0.0.0"]
     #default = ["91.56.56.56/32", "85.25.36.34/32"]
 }
 
@@ -33,5 +33,5 @@ variable "customer_encryption_key" {
 
 variable "read_owner_id" {
     type    = string
-    default = "db7047ad-0219-4880-a4ee-e790b75fb9d5"
+    default = "db7047ad-0219-4880-a4ee-e790b75fb9d5" #Mettre son user_id ayant les droits admin
 }
