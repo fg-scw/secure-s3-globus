@@ -10,7 +10,7 @@ resource "scaleway_iam_application" "read_app" {
   description = "Globus Compute – read access"
 }
 
-# --- WRITE ---
+# -------- POLICIES --------
 
 resource "scaleway_iam_policy" "write_policy" {
   name           = "object-storage-write-${var.bucket_name}"
@@ -18,16 +18,9 @@ resource "scaleway_iam_policy" "write_policy" {
 
   rule {
     project_ids          = [var.project_id]
-    permission_set_names = ["ObjectStorageFullAccess"] # nouvelle clé :contentReference[oaicite:2]{index=2}
+    permission_set_names = ["ObjectStorageFullAccess"]
   }
 }
-
-resource "scaleway_iam_api_key" "write_key" {
-  application_id = scaleway_iam_application.write_app.id
-  description    = "API key – write"
-}
-
-# --- READ ---
 
 resource "scaleway_iam_policy" "read_policy" {
   name           = "object-storage-read-${var.bucket_name}"
@@ -35,12 +28,21 @@ resource "scaleway_iam_policy" "read_policy" {
 
   rule {
     project_ids          = [var.project_id]
-    permission_set_names = ["ObjectStorageFullAccess"]
-    #permission_set_names = ["ObjectStorageReadOnly"] # nouvelle clé :contentReference[oaicite:3]{index=3}
+    permission_set_names = ["ObjectStorageReadOnly"]
   }
 }
 
+
+# -------- API KEYS --------
+
+resource "scaleway_iam_api_key" "write_key" {
+  application_id     = scaleway_iam_application.write_app.id
+  description        = "API key – write"
+  default_project_id = var.project_id
+}
+
 resource "scaleway_iam_api_key" "read_key" {
-  application_id = scaleway_iam_application.read_app.id
-  description    = "API key – read"
+  application_id     = scaleway_iam_application.read_app.id
+  description        = "API key – read"
+  default_project_id = var.project_id
 }
