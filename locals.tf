@@ -1,6 +1,6 @@
-# locals.tf — génération optionnelle de la clé SSE-C et construction
-# d'une bucket-policy strictement « least-privilege » + filtrage IP.
-
+####################
+#  Clé SSE-C
+####################
 resource "random_password" "encryption_key" {
     count   = var.customer_encryption_key == "" ? 1 : 0
     length  = 32
@@ -8,76 +8,84 @@ resource "random_password" "encryption_key" {
 }
 
 locals {
-    # 1) clé de chiffrement : soit l'utilisateur l’a fournie (voir tfvars), soit on utilise celle générée.
     sse_c_key = var.customer_encryption_key != "" ? var.customer_encryption_key : random_password.encryption_key[0].result
 
-    # 2) bucket-policy
-    bucket_policy = jsonencode({
-        Id = "Restrict-access"
-        Version = "2023-04-17"
-        Statement = [
+##############################
+#  Conditions Bucket Policy
+##############################
+    write_condition_block = length(var.write_allowed_ips) > 0 ? {
+        Condition = {
+        IpAddress = { "aws:SourceIp" = var.write_allowed_ips }
+        }
+    } : {}
 
-        # — Write depuis l’application IAM + IPs allowed —
-        {
-            Sid    = "AllowWriteFromWriteApp"
+    read_condition_block = length(var.read_allowed_ips) > 0 ? {
+        Condition = {
+        IpAddress = { "aws:SourceIp" = var.read_allowed_ips }
+        }
+    } : {}
+
+#######################################
+#  Bucket-policy « least-privilege »
+#######################################
+
+    bucket_policy = jsonencode({
+        Version = "2023-04-17",
+        Id      = "MyBucketPolicy"
+
+    Statement = [
+        # ----- WRITE ---------------------------------------------------------
+        merge({
+            Sid    = "AllowWrite"
             Effect = "Allow"
             Principal = {
             SCW = ["application_id:${scaleway_iam_application.write_app.id}"]
             }
-            Action   = [
-                "s3:PutObject",
-                "s3:DeleteObject",
-                "s3:AbortMultipartUpload",
-                "s3:PutObjectVersionTagging",
-                "s3:PutObjectTagging",
-                "s3:PutObjectRetention",
-                "s3:PutObjectLegalHold"
-                ]
+            Action = [
+            "s3:PutObject",
+            "s3:ListBucket",
+            "s3:GetBucketLocation"
+            ]
             Resource = [
-                var.bucket_name,
-                format("%s/*", var.bucket_name)
-                ]
-            Condition = {
-            IpAddress = { "aws:SourceIp" = var.write_allowed_ips }
-            }
-        },
+            var.bucket_name,
+            "${var.bucket_name}/*"
+            ]
+        }, local.write_condition_block),
 
-        # — READ depuis l’application IAM + IPs allowed —
-        {
-            Sid    = "AllowReadFromReadApp"
+        # ----- READ ----------------------------------------------------------
+        merge({
+            Sid    = "AllowRead"
             Effect = "Allow"
             Principal = {
             SCW = ["application_id:${scaleway_iam_application.read_app.id}"]
             }
             Action = [
-                "s3:ListBucket",
-                "s3:ListBucketVersions",
-                "s3:GetObject",
-                "s3:GetObjectVersion"
-                ]
-            #Resource = [var.bucket_name]
+            "s3:GetObject",
+            "s3:ListBucket",
+            "s3:GetObjectVersion",
+            "s3:GetBucketVersioning",
+            "s3:ListBucketVersions",
+            "s3:GetBucketLocation"
+            ]
             Resource = [
             var.bucket_name,
-            format("%s/*", var.bucket_name)
+            "${var.bucket_name}/*"
             ]
-            Condition = {
-            IpAddress = { "aws:SourceIp" = var.read_allowed_ips }
-            }
-        },
+        }, local.read_condition_block),
 
-        # — SECURE L'accès au propriétaire de l'orga pour éviter de se retrouver bloqué —
-        {
-        Sid = "Scaleway secure statement"
-        Action = "*"
-        Effect = "Allow"
-        Resource = [
-            "test-scw-sa-fgz",
-            "test-scw-sa-fgz/*"
-        ]
-        Principal = {
+        # ----- ADMIN ----------------------------------------------------------
+        merge({
+            Sid    = "Scaleway secure statement"
+            Action = "*"
+            Effect = "Allow"
+            Resource = [
+            var.bucket_name,
+            "${var.bucket_name}/*"
+            ]
+            Principal = {
             SCW = ["user_id:${var.read_owner_id}"]
-        }
-        }
+            }
+        })
         ]
     })
 }
