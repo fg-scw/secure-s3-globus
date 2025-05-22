@@ -5,7 +5,7 @@ resource "scaleway_object_bucket" "bucket" {
   versioning { enabled = true }
   tags = {
     key = "managed-by-tf"
-    key = "test-qubit"
+    key = "new"
   }
 
   lifecycle_rule {
@@ -26,3 +26,4 @@ resource "scaleway_object_bucket_policy" "policy" {
   # garantit que la policy est posée après la création du bucket
   depends_on = [scaleway_object_bucket.bucket]
 }
+
