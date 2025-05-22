@@ -3,7 +3,7 @@ resource "scaleway_object_bucket" "bucket" {
   region = var.region
 
   versioning { enabled = true }
-  tags = { key = "managed-by-tf", key = "new" }
+  tags = { key = "managed-by-tf", key = "globus" }
 
   lifecycle_rule {
     enabled                                = true
